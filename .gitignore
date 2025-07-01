@@ -32,3 +32,4 @@ watgbridge.service
 # Nix
 /result
 .direnv/
+.env
