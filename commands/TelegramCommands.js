@@ -55,26 +55,11 @@ class TelegramCommands {
                 case '/unmute':
                     await this.handleUnmute(msg.chat.id, args);
                     break;
-                case '/archive':
-                    await this.handleArchive(msg.chat.id, args);
-                    break;
-                case '/unarchive':
-                    await this.handleUnarchive(msg.chat.id, args);
-                    break;
-                case '/pin':
-                    await this.handlePin(msg.chat.id, args);
-                    break;
-                case '/unpin':
-                    await this.handleUnpin(msg.chat.id, args);
-                    break;
                 case '/ephemeral':
                     await this.handleEphemeral(msg.chat.id, args);
                     break;
                 case '/presence':
                     await this.handlePresence(msg.chat.id, args);
-                    break;
-                case '/restart':
-                    await this.handleRestart(msg.chat.id);
                     break;
                 case '/logs':
                     await this.handleLogs(msg.chat.id, args);
@@ -96,6 +81,9 @@ class TelegramCommands {
                     break;
                 case '/broadcast':
                     await this.handleBroadcast(msg.chat.id, args);
+                    break;
+                case '/updatetopics':
+                    await this.handleUpdateTopics(msg.chat.id);
                     break;
                 case '/help':
                     await this.handleHelp(msg.chat.id);
@@ -407,98 +395,6 @@ class TelegramCommands {
         }
     }
 
-    async handleArchive(chatId, args) {
-        if (args.length < 1) {
-            await this.bridge.telegramBot.sendMessage(chatId,
-                '❌ Usage: /archive <number>\nExample: /archive 1234567890',
-                { parse_mode: 'Markdown' });
-            return;
-        }
-
-        const number = args[0];
-        try {
-            const jid = number.includes('@') ? number : `${number}@s.whatsapp.net`;
-            await this.bridge.whatsappBot.sock.chatModify({ archive: true }, jid);
-            
-            await this.bridge.telegramBot.sendMessage(chatId,
-                `📦 Archived chat with ${number}`,
-                { parse_mode: 'Markdown' });
-        } catch (error) {
-            await this.bridge.telegramBot.sendMessage(chatId, 
-                `❌ Error archiving: ${error.message}`, 
-                { parse_mode: 'Markdown' });
-        }
-    }
-
-    async handleUnarchive(chatId, args) {
-        if (args.length < 1) {
-            await this.bridge.telegramBot.sendMessage(chatId,
-                '❌ Usage: /unarchive <number>\nExample: /unarchive 1234567890',
-                { parse_mode: 'Markdown' });
-            return;
-        }
-
-        const number = args[0];
-        try {
-            const jid = number.includes('@') ? number : `${number}@s.whatsapp.net`;
-            await this.bridge.whatsappBot.sock.chatModify({ archive: false }, jid);
-            
-            await this.bridge.telegramBot.sendMessage(chatId,
-                `📤 Unarchived chat with ${number}`,
-                { parse_mode: 'Markdown' });
-        } catch (error) {
-            await this.bridge.telegramBot.sendMessage(chatId, 
-                `❌ Error unarchiving: ${error.message}`, 
-                { parse_mode: 'Markdown' });
-        }
-    }
-
-    async handlePin(chatId, args) {
-        if (args.length < 1) {
-            await this.bridge.telegramBot.sendMessage(chatId,
-                '❌ Usage: /pin <number>\nExample: /pin 1234567890',
-                { parse_mode: 'Markdown' });
-            return;
-        }
-
-        const number = args[0];
-        try {
-            const jid = number.includes('@') ? number : `${number}@s.whatsapp.net`;
-            await this.bridge.whatsappBot.sock.chatModify({ pin: true }, jid);
-            
-            await this.bridge.telegramBot.sendMessage(chatId,
-                `📌 Pinned chat with ${number}`,
-                { parse_mode: 'Markdown' });
-        } catch (error) {
-            await this.bridge.telegramBot.sendMessage(chatId, 
-                `❌ Error pinning: ${error.message}`, 
-                { parse_mode: 'Markdown' });
-        }
-    }
-
-    async handleUnpin(chatId, args) {
-        if (args.length < 1) {
-            await this.bridge.telegramBot.sendMessage(chatId,
-                '❌ Usage: /unpin <number>\nExample: /unpin 1234567890',
-                { parse_mode: 'Markdown' });
-            return;
-        }
-
-        const number = args[0];
-        try {
-            const jid = number.includes('@') ? number : `${number}@s.whatsapp.net`;
-            await this.bridge.whatsappBot.sock.chatModify({ pin: false }, jid);
-            
-            await this.bridge.telegramBot.sendMessage(chatId,
-                `📌 Unpinned chat with ${number}`,
-                { parse_mode: 'Markdown' });
-        } catch (error) {
-            await this.bridge.telegramBot.sendMessage(chatId, 
-                `❌ Error unpinning: ${error.message}`, 
-                { parse_mode: 'Markdown' });
-        }
-    }
-
     async handleEphemeral(chatId, args) {
         if (args.length < 2) {
             await this.bridge.telegramBot.sendMessage(chatId,
@@ -575,25 +471,6 @@ class TelegramCommands {
                 `❌ Error setting presence: ${error.message}`, 
                 { parse_mode: 'Markdown' });
         }
-    }
-
-    async handleRestart(chatId) {
-        // Only allow owner to restart
-        const ownerId = config.get('telegram.ownerId');
-        if (chatId !== ownerId) {
-            await this.bridge.telegramBot.sendMessage(chatId,
-                '❌ Only the owner can restart the bot',
-                { parse_mode: 'Markdown' });
-            return;
-        }
-
-        await this.bridge.telegramBot.sendMessage(chatId,
-            '🔄 Restarting bot...',
-            { parse_mode: 'Markdown' });
-
-        setTimeout(() => {
-            process.exit(0); // Let process manager restart
-        }, 1000);
     }
 
     async handleLogs(chatId, args) {
@@ -787,6 +664,24 @@ class TelegramCommands {
             { parse_mode: 'Markdown' });
     }
 
+    async handleUpdateTopics(chatId) {
+        try {
+            await this.bridge.telegramBot.sendMessage(chatId,
+                '📝 Updating topic names...',
+                { parse_mode: 'Markdown' });
+
+            await this.bridge.updateTopicNames();
+
+            await this.bridge.telegramBot.sendMessage(chatId,
+                '✅ Topic names updated successfully!',
+                { parse_mode: 'Markdown' });
+        } catch (error) {
+            await this.bridge.telegramBot.sendMessage(chatId,
+                `❌ Error updating topics: ${error.message}`,
+                { parse_mode: 'Markdown' });
+        }
+    }
+
     async handleHelp(chatId) {
         const helpMessage = `🤖 *WhatsApp-Telegram Bridge Commands*\n\n` +
             `*Basic Commands:*\n` +
@@ -802,17 +697,14 @@ class TelegramCommands {
             `/contacts [page] - View WhatsApp contacts\n` +
             `/searchcontact <query> - Search contacts\n` +
             `/groups - List WhatsApp groups\n` +
-            `/sync - Sync contacts and data\n\n` +
+            `/sync - Sync contacts and data\n` +
+            `/updatetopics - Update topic names\n\n` +
             
             `*Chat Management:*\n` +
             `/block <number> - Block contact\n` +
             `/unblock <number> - Unblock contact\n` +
             `/mute <number> [duration] - Mute chat\n` +
-            `/unmute <number> - Unmute chat\n` +
-            `/archive <number> - Archive chat\n` +
-            `/unarchive <number> - Unarchive chat\n` +
-            `/pin <number> - Pin chat\n` +
-            `/unpin <number> - Unpin chat\n\n` +
+            `/unmute <number> - Unmute chat\n\n` +
             
             `*Advanced:*\n` +
             `/ephemeral <number> <on|off> [timer] - Ephemeral messages\n` +
@@ -824,13 +716,13 @@ class TelegramCommands {
             
             `*Admin (Owner Only):*\n` +
             `/authorize <user_id> - Authorize user\n` +
-            `/unauthorize <user_id> - Unauthorize user\n` +
-            `/restart - Restart bot\n\n` +
+            `/unauthorize <user_id> - Unauthorize user\n\n` +
             
             `*Examples:*\n` +
             `• \`/send 1234567890 Hello!\`\n` +
             `• \`/mute 1234567890 8h\`\n` +
-            `• \`/ephemeral 1234567890 on 7d\``;
+            `• \`/ephemeral 1234567890 on 7d\`\n` +
+            `• \`/updatetopics\``;
 
         await this.bridge.telegramBot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
     }
@@ -844,6 +736,7 @@ class TelegramCommands {
             `/send <number> <msg> - Send message\n` +
             `/sync - Sync contacts\n` +
             `/contacts - View contacts\n` +
+            `/updatetopics - Update topic names\n` +
             `/help - Full help`;
         
         await this.bridge.telegramBot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
@@ -903,15 +796,12 @@ class TelegramCommands {
                 { command: 'unblock', description: 'Unblock contact' },
                 { command: 'mute', description: 'Mute chat' },
                 { command: 'unmute', description: 'Unmute chat' },
-                { command: 'archive', description: 'Archive chat' },
-                { command: 'unarchive', description: 'Unarchive chat' },
-                { command: 'pin', description: 'Pin chat' },
-                { command: 'unpin', description: 'Unpin chat' },
                 { command: 'ephemeral', description: 'Set ephemeral messages' },
                 { command: 'presence', description: 'Set presence status' },
                 { command: 'stats', description: 'Show bot statistics' },
                 { command: 'backup', description: 'Create backup' },
-                { command: 'broadcast', description: 'Send broadcast message' }
+                { command: 'broadcast', description: 'Send broadcast message' },
+                { command: 'updatetopics', description: 'Update topic names' }
             ];
 
             await this.bridge.telegramBot.setMyCommands(commands);
